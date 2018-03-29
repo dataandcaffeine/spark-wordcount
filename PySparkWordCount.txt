@@ -1,0 +1,32 @@
+#WordCount 
+#import regex package
+import re
+
+#read in text file, path is "hdfs://yourdefaultFS/yourinputfolder/yourfilename"
+text = sc.textFile("hdfs://localhost:9000/input/input.txt")
+
+
+#define function to map words to key value pairs
+def tuple_mapper(lines):
+    words = lines.split()
+    tuple_list = []    
+    for word1 in words:
+        skip = True
+        for word2 in words:
+            if word1==word2 and skip:
+                skip = False
+                continue
+            if word1 is not None and word2 is not None:
+                word_tuple = tuple([word1,word2])
+                tuple_list.append((word_tuple,1))
+    return tuple_list
+	
+#clean, parse, and map 	
+lowercase = text.map(lambda lines : lines.lower())
+clean = lowercase.map(lambda lines : re.sub('[^A-Za-z0-9\s]+','',lines))
+lines = clean.flatMap(lambda lines : lines.split('\n'))
+pairs = lines.flatMap(tuple_mapper)
+counts = pairs.reduceByKey(lambda count1, count2 : count1 + count2)
+
+#print out text file, path is "hdfs://yourdefaultFS/youroutputfolder/yourfilename"
+counts.saveAsTextFile("hdfs://localhost:9000/output/output.txt")
